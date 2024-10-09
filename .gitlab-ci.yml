@@ -1,0 +1,184 @@
+stages:
+  - static-code-analysis
+  - test
+  - build
+  - scan
+  - dev-deploy
+  - test-promote
+  - test-deploy
+  - prod-promote
+  - prod-deploy
+
+include:
+  - template: Jobs/Container-Scanning.gitlab-ci.yml
+
+
+variables:
+    DOCKERFILE_PATH: example/Dockerfile
+    DOCKER_HUB_USERNAME: "devops091"
+    DOCKER_HUB_REPO: "nanditechbytes"
+    IMAGE_NAME: docker.io/$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO:$CI_PIPELINE_ID
+    HELM_PATH: example/helm
+    K8S_NAMESPACE: demo
+    PROJECT_NAME: hello-app
+
+mega-linter:
+  stage: static-code-analysis
+  tags:
+    - k8s-runner
+  image: oxsecurity/megalinter:latest
+  script:
+    - /bin/bash /entrypoint.sh
+  variables:
+    DEFAULT_WORKSPACE: $CI_PROJECT_DIR
+    DEFAULT_BRANCH: main
+    REPORT_OUTPUT_CONSOLE: true  # Corrected key for console output
+    CONSOLE_REPORTER_SECTIONS: true
+    OUTPUT_DETAIL: simple
+
+  artifacts:
+    when: always
+    paths:
+      - $CI_PROJECT_DIR
+    expire_in: 1 week
+
+unit-test:
+  stage: test
+  tags:
+    - k8s-runner
+  image: node:latest
+  before_script:
+    - cd example
+    - npm install
+    - npm install chai --save-dev
+  script:
+    - npm test
+
+  artifacts:
+    when: always
+    paths:
+      - $CI_PROJECT_DIR
+    expire_in: 1 week  
+
+build-image:
+  stage: build
+  tags:
+    - k8s-runner
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+  script:
+    - ls -al ${CI_PROJECT_DIR}/example
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "${CI_PROJECT_DIR}/example"
+      --dockerfile "${CI_PROJECT_DIR}/"${DOCKERFILE_PATH}""
+      --destination "${IMAGE_NAME}"
+
+container_scanning:
+  stage: scan
+  variables:
+     CS_IMAGE: "$IMAGE_NAME"
+     CS_REGISTRY_USER: "$DOCKER_HUB_USERNAME"
+     CS_REGISTRY_PASSWORD: "$DOCKER_HUB_PASSWORD"
+
+Dev Deploy:
+  stage: dev-deploy
+  image: dtzar/helm-kubectl:3.9.1
+  before_script:
+    - kubectl config use-context $AGENT_CONTEXT
+  script:
+    - helm upgrade 
+      --namespace "$K8S_NAMESPACE" 
+      --install  
+      --values $HELM_PATH/$PROJECT_NAME/values.yaml  
+      --values $HELM_PATH/$PROJECT_NAME/dev_values.yaml 
+      --set image.tag=$CI_PIPELINE_ID
+      $PROJECT_NAME $HELM_PATH/$PROJECT_NAME
+      
+  only:
+    - main
+
+  environment:
+    name: development
+  tags:
+    - k8s-runner
+
+
+Promote Test:
+  stage: test-promote
+  tags:
+    - k8s-runner
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+  script:
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - echo "FROM docker.io/$DOCKER_HUB_USERNAME/$DOCKER_HUB_REPO:$CI_PIPELINE_ID" | 
+      /kaniko/executor  
+      --dockerfile /dev/stdin
+      --destination docker.io/devops091/test:$CI_PIPELINE_ID  
+  only:
+    - main
+  environment:
+    name: test
+
+Deploy Test:
+  stage: test-deploy
+  image: dtzar/helm-kubectl:3.9.1
+  before_script:
+    - kubectl config use-context $AGENT_CONTEXT
+  script:
+    - helm upgrade 
+      --namespace "$K8S_NAMESPACE" 
+      --install  
+      --values $HELM_PATH/$PROJECT_NAME/values.yaml  
+      --values $HELM_PATH/$PROJECT_NAME/test_values.yaml 
+      --set image.tag=$CI_PIPELINE_ID
+      $PROJECT_NAME $HELM_PATH/$PROJECT_NAME
+      
+  only:
+    - main
+
+  environment:
+    name: test
+  tags:
+    - k8s-runner
+
+Promote Prod:
+  stage: prod-promote
+  tags:
+    - k8s-runner
+  image:
+    name: gcr.io/kaniko-project/executor:v1.23.2-debug
+  script:
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"username\":\"$DOCKER_HUB_USERNAME\",\"password\":\"$DOCKER_HUB_PASSWORD\"}}}" > /kaniko/.docker/config.json
+    - echo "FROM docker.io/$DOCKER_HUB_USERNAME/test:$CI_PIPELINE_ID" | 
+      /kaniko/executor  
+      --dockerfile /dev/stdin
+      --destination docker.io/devops091/prod:$CI_PIPELINE_ID  
+  only:
+    - main
+  environment:
+    name: production    
+
+
+Deploy Prod:
+  stage: prod-deploy
+  image: dtzar/helm-kubectl:3.9.1
+  before_script:
+    - kubectl config use-context $AGENT_CONTEXT
+  script:
+    - helm upgrade 
+      --namespace "$K8S_NAMESPACE" 
+      --install  
+      --values $HELM_PATH/$PROJECT_NAME/values.yaml  
+      --values $HELM_PATH/$PROJECT_NAME/prod_values.yaml 
+      --set image.tag=$CI_PIPELINE_ID
+      $PROJECT_NAME $HELM_PATH/$PROJECT_NAME
+      
+  only:
+    - main
+
+  environment:
+    name: production
+  tags:
+    - k8s-runner   

@@ -1,0 +1,9 @@
+namespace: demo
+nodeEnv: development
+image:
+  repository: devops091/nanditechbytes
+  tag: latest
+ports:
+  port: 80
+replicas: 1
+type: LoadBalancer

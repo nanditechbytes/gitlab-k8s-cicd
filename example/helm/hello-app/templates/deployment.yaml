@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app_name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.app_name }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app_name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app_name }}
+    spec:
+      containers:
+      - env:
+        - name: NODE_ENV
+          value: {{ .Values.nodeEnv }}  # Fixed .Values reference
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        name: {{ .Values.app_name }}
+        ports:
+        - containerPort: 3000
+        resources: {}
+      imagePullSecrets:
+        - name: my-repo

@@ -1,0 +1,9 @@
+namespace: demo
+nodeEnv: production
+image:
+  repository: devops091/prod
+  tag: latest
+ports:
+  port: 80
+replicas: 1
+type: LoadBalancer
