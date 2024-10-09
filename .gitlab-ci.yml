@@ -32,7 +32,7 @@ mega-linter:
   variables:
     DEFAULT_WORKSPACE: $CI_PROJECT_DIR
     DEFAULT_BRANCH: main
-    REPORT_OUTPUT_CONSOLE: true  # Corrected key for console output
+    REPORT_OUTPUT_CONSOLE: true  
     CONSOLE_REPORTER_SECTIONS: true
     OUTPUT_DETAIL: simple
 
@@ -85,7 +85,7 @@ Dev Deploy:
   stage: dev-deploy
   image: dtzar/helm-kubectl:3.9.1
   before_script:
-    - kubectl config use-context $AGENT_CONTEXT
+    - kubectl config use-context $KUBE_CONTEXT
   script:
     - helm upgrade 
       --namespace "$K8S_NAMESPACE" 
@@ -125,7 +125,7 @@ Deploy Test:
   stage: test-deploy
   image: dtzar/helm-kubectl:3.9.1
   before_script:
-    - kubectl config use-context $AGENT_CONTEXT
+    - kubectl config use-context $KUBE_CONTEXT
   script:
     - helm upgrade 
       --namespace "$K8S_NAMESPACE" 
@@ -165,7 +165,7 @@ Deploy Prod:
   stage: prod-deploy
   image: dtzar/helm-kubectl:3.9.1
   before_script:
-    - kubectl config use-context $AGENT_CONTEXT
+    - kubectl config use-context $KUBE_CONTEXT
   script:
     - helm upgrade 
       --namespace "$K8S_NAMESPACE" 
