@@ -99,7 +99,9 @@ user_access:
 ```    
 
 ### Set Variables for KUBE_CONTEXT for each environment for deployment. Value's should be 
+```
 <path/to/gitlab-project>:<agent-name>
+```
 
 # Preparing Environment for Application
 ### Create namespace for application on Dev, Test and Prod cluster
