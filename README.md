@@ -86,7 +86,7 @@ kubectl apply -f gitlab-runner/clusterrole-binding.yaml
 
 ### Configure KAS agent for each of the clusters on the Gitlab UI and then run the helm commands provided by the Gitlab on each of the clusters.
 
-### Create agent config files .gitlab/agents/<agent-name>/config.yaml for each agents
+### Create agent config files .gitlab/agents/agent-name/config.yaml for each agents. Replace the agent name with the agents configured.
 ```yaml
 user_access:
   access_as:
