@@ -74,14 +74,14 @@ runners:
 ### Install gitlab runner helm on EKS
 
 ```bash
-helm install -f gitlab-runner.values.yaml gitlab-runner gitlab/gitlab-runner
+helm install -f values.yaml gitlab-runner gitlab/gitlab-runner
 ```
 
 ### Add Permission for gitlab runner
 ```bash
 kubectl config set-context --current --namespace=default
-kubectl apply -f gitlab-runner/clusterrole.yaml
-kubectl apply -f gitlab-runner/clusterrole-binding.yaml
+kubectl apply -f clusterrole.yaml
+kubectl apply -f clusterrole-binding.yaml
 ```
 
 ### Configure KAS agent for each of the clusters on the Gitlab UI and then run the helm commands provided by the Gitlab on each of the clusters.
@@ -97,9 +97,9 @@ user_access:
   groups:
     - id: <group-id>
 ```    
-### Create Gitlab Environment development, test and production with the KAS agent associated
 
-### Set Variables for KUBE_CONTEXT for each environment for deployment.
+### Set Variables for KUBE_CONTEXT for each environment for deployment. Value's should be 
+<path/to/gitlab-project>:<agent-name>
 
 # Preparing Environment for Application
 ### Create namespace for application on Dev, Test and Prod cluster
@@ -107,4 +107,13 @@ user_access:
 kubectl config set-context --current --namespace=default
 kubectl create namespace demo
 ```
-
+### Create Gitlab Environment development, test and production with the KAS agent associated
+### For Dev Cluster only I used private dockerhub repo to showcase the use of private repo.
+### Create the below secrets in Dev cluster demo namespace
+```bash
+kubectl create secret docker-registry my-repo --namespace demo\
+                     --docker-server=https://index.docker.io/v1/ \
+                     --docker-username=<dockerhub-username> \
+                     --docker-password=<dockerhub-password> \
+                     --docker-email=<dockerhub-email>
+```
